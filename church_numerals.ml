@@ -55,9 +55,24 @@ let exp n m = fun f x -> m n f x
 *)
 let is_zero n = n (fun a -> fun x y -> y) (fun x y -> x)
 
+(*
+  Selectors, basically church booleans true and false
+*)
 let pi1 x y = x
 let pi2 x y = y
 
+
+(*
+  This implementation of predecessor uses the following trick:
+  instead of calling n with arguments f and x, we replace f with a special
+  function g that does the same but "wastes" the first application to an element.
+  This is achieved through the use of pairs, the values are of structure (bool, val)
+  where the bool says whether or not that application has already been wasted.
+  By multiple applications of the function g we get the following chain of values:
+  (false, x) -> (true, x) -> (true, f(x)) -> (true, f(f(x))) -> ...
+  From that chain all that we need to do is get the second element of the last pair and
+  that is the value of (n - 1) f x 
+*)
 let pred n f x =
   snd (n (fun p -> (pi1, (fst p) (f (snd p) ) (snd p))) (pi2, x))
 
