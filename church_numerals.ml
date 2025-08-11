@@ -1,12 +1,17 @@
 (*
+  Successor function for church numerals
+*)
+let successor n = fun f x -> n f (f x)
+
+(*
   Recursive definition of a church numeral
 *)
 let rec church n =
-  if n = 0 
+  if n = 0
     then fun f x -> x
-    else fun f x -> f (church (n - 1) f x)
+    else successor (church (n - 1))
 
-(* 
+(*
   Conversion from church numerals to integers
   is done by simply counting how many times a numeral applies
   its function (we do it by applying step() to 0 n times)
@@ -39,6 +44,7 @@ let exp1 n m = fun f x -> m (mul n) (church 1) f x
   (those 2 have different beta-normal forms, I'm pretty sure)
 *)
 let exp n m = fun f x -> m n f x
+
 (*
   The zero test used here returns a the canonical
   "true" or "false" lambda calculus combinators
@@ -47,5 +53,17 @@ let exp n m = fun f x -> m n f x
   a total of n times to "true", meaning that the result will be
   "true" only if the function has been applied 0 times 
 *)
-let is_zero n = n (fun a -> (fun x y -> y)) (fun x y -> x)
+let is_zero n = n (fun a -> fun x y -> y) (fun x y -> x)
 
+let pi1 x y = x
+let pi2 x y = y
+
+let pred n f x =
+  snd (n (fun p -> (pi1, (fst p) (f (snd p) ) (snd p))) (pi2, x))
+
+(*
+let rec primitive_recursion g h (n: ('a -> 'a) -> 'a -> 'a ) args =
+  let thunk1 () = g args in
+  let thunk2 () = h (primitive_recursion g h (pred n) args) n args in
+  (is_zero n) thunk1 thunk2 ()
+*)
