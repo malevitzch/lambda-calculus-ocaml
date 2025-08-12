@@ -76,9 +76,3 @@ let pi2 x y = y
 let pred n f x =
   snd (n (fun p -> (pi1, (fst p) (f (snd p) ) (snd p))) (pi2, x))
 
-(*
-let rec primitive_recursion g h (n: ('a -> 'a) -> 'a -> 'a ) args =
-  let thunk1 () = g args in
-  let thunk2 () = h (primitive_recursion g h (pred n) args) n args in
-  (is_zero n) thunk1 thunk2 ()
-*)
