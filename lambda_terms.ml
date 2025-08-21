@@ -7,22 +7,18 @@ module Lambda = struct
     | App of term * term
     | Abs of string * term
 
-    let rec print_term (t: term) : unit =
+    let rec term_to_str (t: term) : string =
       match t with
-        | Var x ->
-          print_string x;
+        | Var x -> x
         | App (t1, t2) ->
-          print_string "(";
-          print_term t1;
-          print_string ")";
-          print_string "(";
-          print_term t2;
-          print_string ")";
-        | Abs (x, t1) ->
-          print_string lambda;
-          print_string x;
-          print_string ".";
-          print_term t1
+          (match t1 with 
+            | Var y -> y
+            | _ -> "(" ^ (term_to_str t1) ^ ")")
+          ^
+          (match t2 with
+            | Var y -> y
+            | _ -> "(" ^ (term_to_str t2) ^ ")")
+        | Abs (x, t1) -> lambda ^ x ^ "." ^ (term_to_str t1)
 
 let identity : term = Abs ("x", Var "x")
 end
