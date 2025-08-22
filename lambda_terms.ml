@@ -21,5 +21,13 @@ module Lambda = struct
             | _ -> "(" ^ (term_to_str t2) ^ ")")
         | Abs (x, t1) -> lambda ^ x ^ "." ^ (term_to_str t1)
 
+  type 'a maybe_changed = Changed of 'a | Unchanged of 'a
+
+  let rec substitute (target: term) (var: string) (t: term) : term = 
+    match t with 
+      | Var x -> if x = var then target else t
+      | App (t1, t2) -> App (substitute target var t1, substitute target var t2)
+      | Abs (x, t1) -> if x = var then t else Abs (x, substitute target var t1)
+
 let identity : term = Abs ("x", Var "x")
 end
