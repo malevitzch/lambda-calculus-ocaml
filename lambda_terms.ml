@@ -30,7 +30,12 @@ module Lambda = struct
           | _ -> "(" ^ (term_to_str t2) ^ ")")
       | Abs (x, t1) -> lambda ^ x ^ "." ^ (term_to_str t1)
 
-  type 'a maybe_changed = Changed of 'a | Unchanged of 'a
+
+  type 'a maybe_changed =
+    | Changed of 'a
+    | Unchanged of 'a
+
+  type mterm = term maybe_changed
 
   let get (mc: 'a maybe_changed) : 'a =
     match mc with
@@ -43,9 +48,9 @@ module Lambda = struct
     by an abstraction.
 
     The arguments are (in order):
-      - The name of the variable you want to substitute for
-      - The term that you substitute for said variable
-      - The term you want to perform the substitution on
+      - var: the name of the variable you want to substitute for
+      - target: the term that you substitute for said variable
+      - t: the term you want to perform the substitution on
   *)
   let rec substitute (var: string) (target: term) (t: term) : term = 
     match t with 
@@ -88,7 +93,7 @@ module Lambda = struct
     This function takes a single argument: the term t that you want to perform
     the reduction on.
   *)
-  let rec standard_reduction (t: term) : term maybe_changed =
+  let rec standard_reduction (t: term) : mterm =
     match t with
     | Var _ -> Unchanged t
     | App (Abs (x, t1), t2) -> Changed (substitute x t2 t1) (* beta-reduction *)
@@ -107,7 +112,42 @@ module Lambda = struct
         | Unchanged t2 -> Unchanged (App (t1, t2))))
 
 
-let identity : term = Abs ("x", Var "x")
-let omega : term = Abs ("x", App (Var "x", Var "x"))
-let bigomega : term = App (omega, omega)
+  type maybe_normalized =
+    | Normalized of term
+    | NotNormalized of term
+
+  (*
+    Function that attempts to normalize a term using
+    the leftmost reduction strategy, but limiting
+    the number of beta-reductions to max_steps to avoid endless reductions
+    on terms without a normal form.
+
+    The arguments are (in order):
+      - max_steps: the maximum number of reductions
+      - t: the term you want to normalize
+
+    The function returns:
+      - Normalized term - if the function managed to normalize the given term,
+        then "term" holds the normal form of t
+      - NotNormalized term - if the function failed to normalize the given term,
+        then "term" holds the result of applying max_steps reductions to t
+  *)
+  let normalize (max_steps: int) (t: term) : maybe_normalized =
+    let rec normalize_helper (limit: int) (i: int) (t: mterm) : mterm =
+      (if i = limit then t else
+        match t with
+        | Changed t1 -> normalize_helper limit (i+1) (standard_reduction t1)
+        | Unchanged t1 -> t) in
+    let mt = normalize_helper max_steps 0 (Changed t) in
+      match standard_reduction (get mt) with
+      | Changed _ -> NotNormalized (get mt)
+      | Unchanged _ -> Normalized (get mt)
+  (*
+    Some basic lambda-terms
+  *)
+  module Terms = struct
+    let identity : term = Abs ("x", Var "x")
+    let omega : term = Abs ("x", App (Var "x", Var "x"))
+    let bigomega : term = App (omega, omega)
+  end
 end
