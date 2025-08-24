@@ -12,6 +12,10 @@ module Lambda = struct
     | App of term * term
     | Abs of string * term
 
+
+  let (>.) (x: string) (t: term) : term = Abs (x, t)
+  let (@) (t1: term) (t2: term) : term = App (t1, t2)
+
   (*
     Conversion of lambda terms to strings
     Avoids printing unnecessary parentheses
@@ -20,7 +24,7 @@ module Lambda = struct
     match t with
       | Var x -> x
       | App (t1, t2) ->
-        (match t1 with 
+        (match t1 with
           | Var y -> y
           | App _ -> term_to_str t1
           | Abs _ -> "(" ^ (term_to_str t1) ^ ")")
@@ -55,8 +59,8 @@ module Lambda = struct
   let rec substitute (var: string) (target: term) (t: term) : term = 
     match t with 
       | Var x -> if x = var then target else t
-      | App (t1, t2) -> App (substitute var target t1, substitute var target t2)
-      | Abs (x, t1) -> if x = var then t else Abs (x, substitute var target t1)
+      | App (t1, t2) -> substitute var target t1 @ substitute var target t2
+      | Abs (x, t1) -> if x = var then t else x >. substitute var target t1
 
   (*
     Auxiliary function to check whether a term is a beta-redex,
@@ -99,17 +103,17 @@ module Lambda = struct
     | App (Abs (x, t1), t2) -> Changed (substitute x t2 t1) (* beta-reduction *)
     | Abs (x, t1) ->
       (match (standard_reduction t1) with 
-      | Unchanged t2 -> Unchanged (Abs (x, t2))
-      | Changed t2 -> Changed (Abs (x, t2)))
+      | Unchanged t2 -> Unchanged (x >. t1)
+      | Changed t2 -> Changed (x >. t2))
     | App (t1, t2) ->
       let rt1 = (standard_reduction t1) in 
       (match rt1 with
-      | Changed t1 -> Changed (App (t1, t2))
+      | Changed t1 -> Changed (t1 @ t2)
       | Unchanged t1 ->
         let rt2 = (standard_reduction t2) in
         (match rt2 with
-        | Changed t2 -> Changed (App (t1, t2))
-        | Unchanged t2 -> Unchanged (App (t1, t2))))
+        | Changed t2 -> Changed (t1 @ t2)
+        | Unchanged t2 -> Unchanged (t1 @ t2)))
 
 
   type maybe_normalized =
@@ -142,12 +146,29 @@ module Lambda = struct
       match standard_reduction (get mt) with
       | Changed _ -> NotNormalized (get mt)
       | Unchanged _ -> Normalized (get mt)
+
+  (*
+    The unsafe version of normalize, doesn't enforce any limits as to the
+    maximal number of reduction steps. Use with caution!
+  *)
+  let normalize_unsafe (t: term) : term =
+    let rec normalize_helper (t: mterm) : term =
+      (match t with
+      | Changed t -> normalize_helper (standard_reduction t)
+      | Unchanged t -> t) in
+    normalize_helper (Changed t)
   (*
     Some basic lambda-terms
   *)
   module Terms = struct
-    let identity : term = Abs ("x", Var "x")
-    let omega : term = Abs ("x", App (Var "x", Var "x"))
-    let bigomega : term = App (omega, omega)
+    let identity : term = "x" >. Var "x"
+    let omega : term = "x" >. Var "x" @ Var "x"
+    let bigomega : term = omega @ omega
+
+    let rec church (n: int) : term = 
+      normalize_unsafe (if n = 0 
+        then "f" >. ( "x" >. Var "x")
+        else "f" >. ("x" >. (Var "f" @ ((church (n - 1) @ Var "f") @ Var "x" ))))
   end
+
 end
