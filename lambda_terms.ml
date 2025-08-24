@@ -13,8 +13,8 @@ module Lambda = struct
     | Abs of string * term
 
 
-  let (>.) (x: string) (t: term) : term = Abs (x, t)
-  let (@) (t1: term) (t2: term) : term = App (t1, t2)
+  let (@>) (x: string) (t: term) : term = Abs (x, t)
+  let (&@) (t1: term) (t2: term) : term = App (t1, t2)
 
   (*
     Conversion of lambda terms to strings
@@ -56,11 +56,11 @@ module Lambda = struct
       - target: the term that you substitute for said variable
       - t: the term you want to perform the substitution on
   *)
-  let rec substitute (var: string) (target: term) (t: term) : term = 
-    match t with 
+  let rec substitute (var: string) (target: term) (t: term) : term =
+    match t with
       | Var x -> if x = var then target else t
-      | App (t1, t2) -> substitute var target t1 @ substitute var target t2
-      | Abs (x, t1) -> if x = var then t else x >. substitute var target t1
+      | App (t1, t2) -> substitute var target t1 &@ substitute var target t2
+      | Abs (x, t1) -> if x = var then t else x @> substitute var target t1
 
   (*
     Auxiliary function to check whether a term is a beta-redex,
@@ -68,7 +68,7 @@ module Lambda = struct
     we treat as nothing else than function application, thus
     (λx.M)P -> M[x := P] (substitute x in M for P).
   *)
-  let is_beta_redex (t: term) : bool = 
+  let is_beta_redex (t: term) : bool =
     match t with
       | App (Abs (_, _), _) -> true
       | _ -> false
@@ -102,18 +102,18 @@ module Lambda = struct
     | Var _ -> Unchanged t
     | App (Abs (x, t1), t2) -> Changed (substitute x t2 t1) (* beta-reduction *)
     | Abs (x, t1) ->
-      (match (standard_reduction t1) with 
-      | Unchanged t2 -> Unchanged (x >. t1)
-      | Changed t2 -> Changed (x >. t2))
+      (match (standard_reduction t1) with
+      | Unchanged t2 -> Unchanged (x @> t1)
+      | Changed t2 -> Changed (x @> t2))
     | App (t1, t2) ->
-      let rt1 = (standard_reduction t1) in 
+      let rt1 = (standard_reduction t1) in
       (match rt1 with
-      | Changed t1 -> Changed (t1 @ t2)
+      | Changed t1 -> Changed (t1 &@ t2)
       | Unchanged t1 ->
         let rt2 = (standard_reduction t2) in
         (match rt2 with
-        | Changed t2 -> Changed (t1 @ t2)
-        | Unchanged t2 -> Unchanged (t1 @ t2)))
+        | Changed t2 -> Changed (t1 &@ t2)
+        | Unchanged t2 -> Unchanged (t1 &@ t2)))
 
 
   type maybe_normalized =
@@ -161,14 +161,14 @@ module Lambda = struct
     Some basic lambda-terms
   *)
   module Terms = struct
-    let identity : term = "x" >. Var "x"
-    let omega : term = "x" >. Var "x" @ Var "x"
-    let bigomega : term = omega @ omega
+    let identity : term = "x" @> Var "x"
+    let omega : term = "x" @> (Var "x" &@ Var "x")
+    let bigomega : term = omega &@ omega
 
-    let rec church (n: int) : term = 
-      normalize_unsafe (if n = 0 
-        then "f" >. ( "x" >. Var "x")
-        else "f" >. ("x" >. (Var "f" @ ((church (n - 1) @ Var "f") @ Var "x" ))))
+    let rec church (n: int) : term =
+      normalize_unsafe (if n = 0
+        then "f" @> ( "x" @> Var "x")
+        else "f" @> "x" @> (Var "f" &@ (church (n - 1) &@ Var "f" &@ Var "x" )))
   end
 
 end
