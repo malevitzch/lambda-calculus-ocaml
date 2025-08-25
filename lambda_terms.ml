@@ -39,6 +39,11 @@ module Lambda = struct
     | Changed of 'a
     | Unchanged of 'a
 
+  let is_changed (mc: 'a maybe_changed) : bool =
+    match mc with
+    | Changed c -> true
+    | Unchanged uc -> false
+
   type mterm = term maybe_changed
 
   let get (mc: 'a maybe_changed) : 'a =
@@ -148,15 +153,43 @@ module Lambda = struct
       | Unchanged _ -> Normalized (get mt)
 
   (*
+    An attempt at making reductions faster, it simultaneously reduces every redex
+    but doesn't really run faster than regular standard reduction and still blows
+    up quadratically in some cases, so it's not really useful in practice, although
+    in specific cases of very "horizontal" terms it might provide a performance benefit
+    by doing the reductions in parallel when possible and avoiding unnecessary traversals
+    of the whole syntax tree of the term.
+  *)
+  let rec multi_reduction (t: term) : mterm =
+    match t with
+    | Var _ -> Unchanged t
+    | App (Abs (x, t1), t2) -> Changed (get (multi_reduction (substitute x t2 t1)))
+    | Abs(x, t1) ->
+      (match (multi_reduction t1) with
+      | Changed t1 -> Changed (x @> get (multi_reduction t1))
+      | Unchanged t1 -> let rt1 = multi_reduction t1 in 
+        if is_changed rt1
+          then Changed (x @> get rt1)
+          else Unchanged (x @> get rt1))
+    | App (t1, t2) -> 
+      let a = multi_reduction t1 in
+      let b = multi_reduction t2 in
+      if is_changed a || is_changed b
+        then Changed (get a &@ get b)
+        else Unchanged (get a &@ get b)
+
+  (*
     The unsafe version of normalize, doesn't enforce any limits as to the
     maximal number of reduction steps. Use with caution!
   *)
   let normalize_unsafe (t: term) : term =
     let rec normalize_helper (t: mterm) : term =
       (match t with
-      | Changed t -> normalize_helper (standard_reduction t)
+      | Changed t -> normalize_helper (multi_reduction t)
       | Unchanged t -> t) in
     normalize_helper (Changed t)
+
+
   (*
     Some basic lambda-terms
   *)
