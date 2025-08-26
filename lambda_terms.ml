@@ -49,6 +49,11 @@ module Lambda = struct
     | Changed of 'a
     | Unchanged of 'a
 
+  let rec all_variables (t: term) : StringSet.t =
+    match t with
+    | Var x -> StringSet.singleton x
+    | App (t1, t2) -> StringSet.union (all_variables t1) (all_variables t2)
+    | Abs (x, t) -> StringSet.add x (all_variables t)
 
   let is_changed (mc: 'a maybe_changed) : bool =
     match mc with
