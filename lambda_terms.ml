@@ -35,9 +35,20 @@ module Lambda = struct
       | Abs (x, t1) -> lambda ^ x ^ "." ^ (term_to_str t1)
 
 
+  module StringSet = Set.Make(String)
+
+  (*
+    Function for calculating the set of free variables of a term
+  *)
+  let rec free_variables (t: term) : StringSet.t = 
+    match t with
+    | Var x -> StringSet.singleton x
+    | App (t1, t2) -> StringSet.union (free_variables t1) (free_variables t2)
+    | Abs (x, t) -> StringSet.remove x (free_variables t)
   type 'a maybe_changed =
     | Changed of 'a
     | Unchanged of 'a
+
 
   let is_changed (mc: 'a maybe_changed) : bool =
     match mc with
@@ -66,6 +77,14 @@ module Lambda = struct
       | Var x -> if x = var then target else t
       | App (t1, t2) -> substitute var target t1 &@ substitute var target t2
       | Abs (x, t1) -> if x = var then t else x @> substitute var target t1
+
+  let rec alpha_convert (variable: string) (new_variable: string) (t: term) : term =
+    match t with 
+    | Var x -> if x = variable then Var new_variable else Var x
+    | App (t1, t2) -> alpha_convert variable new_variable t1 &@ alpha_convert variable new_variable t2
+    | Abs (x, t1) -> if x = variable 
+      then new_variable @> alpha_convert variable new_variable (substitute variable (Var new_variable) t1) 
+      else x @> alpha_convert variable new_variable t1
 
   (*
     Auxiliary function to check whether a term is a beta-redex,
