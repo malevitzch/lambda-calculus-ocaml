@@ -222,10 +222,16 @@ module Lambda = struct
     let omega : term = "x" @> (Var "x" &@ Var "x")
     let bigomega : term = omega &@ omega
 
+    let church_succ : term =
+      "n" @> "f" @> "x" @> (Var "f" &@ ( Var "n" &@ Var "f" &@ Var "x" ))
+
     let rec church (n: int) : term =
       normalize_unsafe (if n = 0
         then "f" @> ( "x" @> Var "x")
-        else "f" @> "x" @> (Var "f" &@ (church (n - 1) &@ Var "f" &@ Var "x" )))
+        else church_succ &@ ( church (n - 1)))
+
+    let church_add : term = 
+      "n" @> "m" @> "f" @> "x" @> (Var "n" &@ Var "f" &@ (Var "m" &@ Var "f" &@ Var "x") )
   end
 
 end
