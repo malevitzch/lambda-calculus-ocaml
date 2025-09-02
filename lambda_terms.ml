@@ -45,6 +45,7 @@ module Lambda = struct
     | Var x -> StringSet.singleton x
     | App (t1, t2) -> StringSet.union (free_variables t1) (free_variables t2)
     | Abs (x, t) -> StringSet.remove x (free_variables t)
+
   type 'a maybe_changed =
     | Changed of 'a
     | Unchanged of 'a
@@ -85,11 +86,24 @@ module Lambda = struct
 
   let rec alpha_convert (variable: string) (new_variable: string) (t: term) : term =
     match t with 
-    | Var x -> if x = variable then Var new_variable else Var x
+    | Var x -> t
     | App (t1, t2) -> alpha_convert variable new_variable t1 &@ alpha_convert variable new_variable t2
     | Abs (x, t1) -> if x = variable 
-      then new_variable @> alpha_convert variable new_variable (substitute variable (Var new_variable) t1) 
+      then new_variable @> 
+        alpha_convert variable new_variable (substitute variable (Var new_variable) t1) 
       else x @> alpha_convert variable new_variable t1
+
+  let term_variable_symbols = [
+    "x"; "y"; "z"; "f"; "g"; "h"; "a";
+    "b"; "c"; "d"; "e"; "j"; "k"; "l";
+    "m"; "n"; "i"; "o"; "p"; "r"; "s"
+  ]
+
+  (*
+    TODO: implement
+  *)
+  let find_new_var (used_set: StringSet.t) : string option = 
+    List.find_opt (fun var -> not (StringSet.mem var used_set)) term_variable_symbols
 
   (*
     Auxiliary function to check whether a term is a beta-redex,
