@@ -102,7 +102,7 @@ module Lambda = struct
   (*
     TODO: implement
   *)
-  let find_new_var (used_set: StringSet.t) : string option = 
+  let find_new_var (used_set: StringSet.t) : string option =
     List.find_opt (fun var -> not (StringSet.mem var used_set)) term_variable_symbols
 
   (*

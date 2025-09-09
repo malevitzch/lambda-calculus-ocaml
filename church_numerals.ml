@@ -71,7 +71,7 @@ let pi2 x y = y
   By multiple applications of the function g we get the following chain of values:
   (false, x) -> (true, x) -> (true, f(x)) -> (true, f(f(x))) -> ...
   From that chain all that we need to do is get the second element of the last pair and
-  that is the value of (n - 1) f x 
+  that is the value of (n - 1) f x
 *)
 let pred n f x =
   snd (n (fun p -> (pi1, (fst p) (f (snd p) ) (snd p))) (pi2, x))
