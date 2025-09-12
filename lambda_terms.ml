@@ -40,7 +40,7 @@ module Lambda = struct
   (*
     Function for calculating the set of free variables of a term
   *)
-  let rec free_variables (t: term) : StringSet.t = 
+  let rec free_variables (t: term) : StringSet.t =
     match t with
     | Var x -> StringSet.singleton x
     | App (t1, t2) -> StringSet.union (free_variables t1) (free_variables t2)
@@ -89,8 +89,8 @@ module Lambda = struct
     | Var x -> t
     | App (t1, t2) -> alpha_convert variable new_variable t1 &@ alpha_convert variable new_variable t2
     | Abs (x, t1) -> if x = variable 
-      then new_variable @> 
-        alpha_convert variable new_variable (substitute variable (Var new_variable) t1) 
+      then new_variable @>
+        alpha_convert variable new_variable (substitute variable (Var new_variable) t1)
       else x @> alpha_convert variable new_variable t1
 
   let term_variable_symbols = [
@@ -100,10 +100,11 @@ module Lambda = struct
   ]
 
   (*
-    TODO: implement
+    This picks a variable symbol that is not in the given set.
+    If it's not possible, it raises an exception
   *)
-  let find_new_var (used_set: StringSet.t) : string option =
-    List.find_opt (fun var -> not (StringSet.mem var used_set)) term_variable_symbols
+  let find_new_var (used_set: StringSet.t) : string =
+    List.find (fun var -> not (StringSet.mem var used_set)) term_variable_symbols
 
   (*
     Auxiliary function to check whether a term is a beta-redex,
